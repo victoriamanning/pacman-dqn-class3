@@ -1,103 +1,143 @@
-# Ms. Pac-Man DQN — Class 3 Assignment (Fundamentals of Agentic AI)
+# Ms. Pac-Man DQN — Class 3 (Fundamentals of Agentic AI)
 
-Training a small Deep Q-Network to play Ms. Pac-Man from raw pixels, using the class's [pacman-dqn](https://github.com/pepealonso95/pacman-dqn) starter notebook. This repository is my executed submission: the notebook, my hyperparameter choices, and the evidence from my run.
+This is my submission for the Class 3 assignment: train a DQN to play Ms. Pac-Man, using the
+class's starter notebook, and explain what actually happened.
 
-## Open and run
+## How to run this
 
-1. Clone this repository.
-2. Open [`pacman_dqn.ipynb`](pacman_dqn.ipynb) in Jupyter Lab, VS Code, or Google Colab, with a Python 3.11–3.13 kernel.
-3. Section 1 already contains my three chosen values (see below). Choose **Run All** — the notebook installs its own packages and detects CUDA / Apple Silicon MPS / CPU automatically.
+Open [pacman_dqn.ipynb](pacman_dqn.ipynb) in Google Colab (or local Jupyter/VS Code with a
+Python 3.11–3.13 kernel), select a GPU under Runtime → Change runtime type if you're in Colab,
+and choose Run All. Section 1 already has my three chosen values in it.
 
-Local setup, if you need it:
+I ran this in Google Colab, on their T4 GPU when available (PyTorch 2.11.0+cu128, Python 3.13.15,
+Linux).
 
-```sh
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m jupyter lab pacman_dqn.ipynb
-```
+## My three hyperparameters — and why I ended up here
 
-This copy was run locally (not in Colab) on a MacBook with Apple Silicon, using MPS acceleration.
+My final values: **exploration = 0.20, episodes = 25, learning rate = 0.00002.**
 
-## My three hyperparameters and why
+I didn't land on these straight away — I actually went through a few rounds of testing, and the
+learning rate changed along the way. Here's the reasoning:
 
-| Setting | Value | Why |
+- **Exploration (0.20):** kept the notebook's starting point the whole time. In class we talked
+  about how 0% exploration locks the agent into a suboptimal path, so I wanted to leave a real
+  chunk of moves exploring rather than just exploiting whatever the network had already learned.
+- **Episodes (25):** enough to pass the assignment's 25-episode threshold for intermediate
+  GIFs/checkpoints, without turning every test run into a 10+ minute wait.
+- **Learning rate (0.00002, down from 0.0001):** I started at 0.0001, the notebook's suggested
+  reference point. It didn't work well (see below), and once I noticed the problem looked like
+  the "learning rate too high, overshoots and never converges" issue from lecture, I tried a
+  smaller one instead. That's the version I'm submitting.
+
+## What I expected vs. what actually happened
+
+I expected 25 episodes at the default learning rate (0.0001) to give at least a small bump over
+the untrained network. It didn't — the mean evaluation score actually dropped, from 492.0 down to
+284.0. So I tried training longer (200 episodes) to see if it just needed more time. It got
+*worse*, not better (mean dropped to 212.0), and the loss kept climbing the entire run instead of
+leveling off — a sign the network was diverging, not learning.
+
+That pointed at the learning rate itself as the problem, not the episode count. So I dropped it
+from 0.0001 to 0.00002, kept exploration and episodes exactly the same, and reran. This time the
+mean score only dropped to 446.0 (much closer to the baseline of 492.0), and the loss curve
+stayed much flatter instead of climbing continuously. It's the version below.
+
+## Evaluation results — my final run (25 episodes, lr = 0.00002)
+
+| Game | Before (untrained) | After (trained) |
 |---|---|---|
-| **Exploration** | `0.20` | Kept the notebook's starting point. The lecture's example — 0% exploration "locks in a suboptimal path" — argues against going lower; 20% still leaves 80% of moves exploiting whatever the network has learned. |
-| **Episodes** | `25` | Enough to cross the assignment's 25-episode threshold for intermediate GIFs/checkpoints and to produce a real (if small) number of learning updates, without an excessively long run on a laptop CPU/GPU. 5 would only check that the pipeline runs; 100 would take much longer for a first pass. |
-| **Learning rate** | `0.0001` | The notebook's reference point and the lecture's example of a safe step size — small enough to avoid the "overshoots and never converges" failure mode, at the cost of needing more updates to move very far. |
+| 1 | 350 | 370 |
+| 2 | 500 | 810 |
+| 3 | 320 | 340 |
+| 4 | 800 | 500 |
+| 5 | 490 | 210 |
+| **Mean** | **492.0** | **446.0** |
 
-I also set `SHOW_POPUPS = False` in the preview-settings cell (section 2). This only changes whether gameplay samples open in a separate desktop window versus displaying inline in the notebook — it does not touch the agent, its training, or any score. I set it because I ran the notebook end-to-end as an unattended batch job rather than clicking through cells interactively.
-
-## What I expected vs. what happened
-
-**Expected:** with 25 episodes (about 16,000 decisions) I expected a modest improvement over the untrained network — training-time scores looked reasonable (mean 782, several games above 1,000), so I expected that to show up in the fixed-seed evaluation too.
-
-**Observed:** it didn't. The mean evaluation score went **down** after training, from 492.0 (untrained) to 332.0 (trained) — every one of the five evaluation games scored lower after training than the untrained network did on the same seed. I'm reporting this as-is rather than re-running to chase a better-looking number.
-
-### All five evaluation scores (same 5 seeds, 5% exploration, both before and after — see [`results/comparison.json`](results/comparison.json))
-
-| Seed | Before (untrained) | After (trained, 25 ep) |
-|---|---|---|
-| 101 | 350 | 390 |
-| 202 | 500 | 460 |
-| 303 | 320 | 220 |
-| 404 | 800 | 300 |
-| 505 | 490 | 290 |
-| **Mean** | **492.0** | **332.0** |
+Change in mean score: **−46.0**. Still not a genuine improvement, but a much smaller drop than
+either of my earlier attempts — full numbers in [`results/comparison.json`](results/comparison.json).
 
 ### Training dashboard
 
 ![Training dashboard: score, loss, exploration](results/training_dashboard.png)
 
-Raw per-game training score is noisy but trends up (light blue line/orange running average); mean update loss actually **rises** slightly over the run (0.026 → 0.049) rather than falling. Neither of those training-side signals predicted the drop in the held-out evaluation score — a direct illustration of the lecture's point that lower training loss doesn't guarantee better play.
+Loss rises much more gently here than in my earlier runs and starts to flatten out toward the
+end, instead of climbing the whole time — that's the main evidence the lower learning rate
+actually helped with the instability.
 
 ### Gameplay GIFs
 
-| Untrained (before) | After 25 episodes (intermediate) | Best of 5, after training |
-|---|---|---|
-| ![Untrained gameplay](results/demos/untrained.gif) | ![Intermediate gameplay, episode 25](results/demos/intermediate_episode_0025.gif) | ![Best trained gameplay](results/demos/best_trained.gif) |
+| Untrained (before) | Best of 5, after training |
+|---|---|
+| ![Untrained gameplay](results/demos/untrained.gif) | ![Best trained gameplay](results/demos/best_trained.gif) |
 
-Since this run used exactly 25 training episodes, the only "intermediate" checkpoint/GIF the notebook produces is at episode 25, which is also the final episode — so the intermediate and final-training-episode samples are the same checkpoint. The "best of 5" GIF is chosen from the five post-training evaluation games by full-game score (its excerpt still only covers the first 20 seconds).
+Since this final run only used 25 episodes, there's no separate "intermediate" checkpoint before
+the end — episode 25 is both the intermediate demo point and the final result. (My 200-episode
+experiment below does have real intermediate GIFs, since it crossed that threshold several
+times.)
 
-## Actual training budget
+## Actual training budget (this run)
 
-From [`results/training_summary.json`](results/training_summary.json) and [`results/config.json`](results/config.json):
+- **Completed episodes:** 25 / 25 — not interrupted
+- **Total decisions:** 15,084
+- **Learning updates:** 3,522
+- **Elapsed time:** ~54 seconds (training + periodic evaluation samples)
+- **Hardware:** Google Colab, T4 GPU (CUDA), Python 3.13.15
+- Full settings in [`config.json`](results/config.json), per-episode log in
+  [`training.csv`](results/training.csv), summary in
+  [`training_summary.json`](results/training_summary.json)
 
-- **Completed episodes:** 25 / 25 (run finished normally — not interrupted)
-- **Total decisions (agent actions):** 16,260
-- **Learning updates:** 3,816
-- **Elapsed time:** ~105 seconds (training + periodic evaluation samples)
-- **Hardware:** Apple M2 (8-core), macOS, PyTorch 2.14.0 on **MPS** (Apple GPU acceleration)
-- **Software:** Python 3.13.5, Gymnasium 1.3.0, ALE 0.11.2, NumPy 2.5.3 — full list in `config.json`
+None of my runs were interrupted, and all of them had real learning updates — even the worst
+result (200 episodes) trained for the full budget and updated the network over 30,000 times.
 
-Per-episode scores, steps, loss, and timing are in [`results/training.csv`](results/training.csv). No run was interrupted early, and learning updates did occur (3,816 of them) — this was a completed run with a genuine, if disappointing, result, not a setup failure.
+## In plain language
 
-## In plain language: observations, actions, rewards
-
-- **Observations:** the agent doesn't see game objects or coordinates — it sees four consecutive game screens, each reduced to an 84×84 grayscale image. Stacking four frames lets the network infer motion (e.g., which way a ghost is moving) from a single snapshot in time.
-- **Actions:** at each decision point the agent picks one of Ms. Pac-Man's joystick moves (up/down/left/right and diagonals/no-op, depending on the game's action set).
-- **Rewards:** the reward is the raw change in the in-game score — pellets, power pellets, and eating ghosts increase it; nothing shapes or redirects this signal. During training, rewards are clipped to [-1, +1] purely to stabilize the learning update; every score reported here is the true, unclipped game score.
+The agent doesn't see the maze as objects — it sees four stacked grayscale game screens, so it
+can tell which direction things are moving. It picks one joystick move (up/down/left/right,
+diagonals) at each decision point. It's rewarded by the actual points it scores in the game —
+eating pellets, power pellets, and ghosts — nothing shaped or invented on top of that.
 
 ## One limitation
 
-16,260 decisions and 3,816 learning updates is very small for a raw-pixel Atari agent — the original DQN paper trains on tens of millions of frames. With only a 5,000-transition replay buffer and 25 episodes, the network has barely moved from its random initialization in any way that matters for full-game play, and a 5-seed evaluation is noisy enough that this particular before/after comparison could easily flip with different seeds. This run is evidence the training pipeline works end-to-end, not evidence of a competent Pac-Man agent.
+Even my best run (lr = 0.00002) still ended up slightly below the untrained baseline. 25
+episodes and ~15,000 decisions just isn't much training for a raw-pixel Atari agent — the
+original DQN paper uses tens of millions of frames. The lower learning rate clearly reduced the
+instability I was seeing, but it didn't fully fix it in this short a run.
 
 ## Next experiment
 
-I would change **only the episode budget** — from 25 to roughly 200–300 — while holding exploration (0.20) and learning rate (0.0001) fixed, to test whether an order-of-magnitude more learning updates is enough to turn the evaluation delta positive. I picked this over changing exploration or learning rate because the training curve was still visibly noisy and trending upward when the run ended at episode 25; more episodes is the most direct way to find out whether the agent was simply cut off too early, before changing anything else about how it learns.
+I'd combine the two things I learned: keep the lower learning rate (0.00002) but let it train
+for longer — 100–200 episodes instead of 25 — to see if the now-more-stable loss curve
+eventually turns into an actual improvement in the evaluation score, rather than just a smaller
+loss.
 
-## Repository contents
+## Other experiments I ran along the way
 
-- [`pacman_dqn.ipynb`](pacman_dqn.ipynb) — the executed notebook, saved with all outputs from this run (do not clear outputs).
-- `results/` — evidence copied out of the full run folder:
-  - `comparison.json`, `training_summary.json`, `config.json`, `training.csv`, `training_dashboard.png`
-  - `demos/untrained.gif`, `demos/intermediate_episode_0025.gif`, `demos/best_trained.gif`
-- Model checkpoints (`untrained.pt`, `episode_0025.pt`, `trained.pt`, ~6.4 MB each) are **not** committed to this repository (the notebook's `.gitignore` excludes `pacman_runs/` and `*.pt`) — they remain in the full local run folder `pacman_runs/20260913_143119_738703/` alongside a ZIP of the entire run.
+I didn't just run this once — here's the full trail, in case it's useful evidence of the
+process:
 
-## Verification note inherited from the starter repo
+**25 episodes, learning rate 0.0001 (my original choice):** mean score 492.0 → 284.0
+(change −208.0). Full result in [`results/experiment_25ep_lr0001/`](results/experiment_25ep_lr0001/).
 
-The starter repository's own verification (see the "Verification" section it shipped with, in git history) was a 5-episode smoke test of the notebook code itself, run before I made my three choices. It is not evidence about Pac-Man performance at any episode count and is unrelated to the training results reported above, which come from my own 25-episode run.
+**200 episodes, learning rate 0.0001 (testing "does it just need more time?"):** mean score
+492.0 → 212.0 (change −280.0) — worse, not better. This run does have real intermediate GIFs and
+checkpoints every 25 episodes. Full result in
+[`results/experiment_200ep_lr0001/`](results/experiment_200ep_lr0001/).
+
+| Run | Mean before | Mean after | Change | Elapsed time |
+|---|---|---|---|---|
+| 25 ep, lr=0.0001 | 492.0 | 284.0 | −208.0 | ~49 seconds |
+| 200 ep, lr=0.0001 | 492.0 | 212.0 | −280.0 | ~7.6 minutes |
+| **25 ep, lr=0.00002 (final)** | **492.0** | **446.0** | **−46.0** | **~54 seconds** |
+
+The lower-learning-rate fix cost basically nothing extra in runtime (54s vs 49s) while cutting
+the score drop by more than 4x — compared to the 200-episode run, which took 9x longer and made
+things worse.
+
+## Where everything is kept
+
+Model checkpoints (~6-7 MB each per run) aren't in this repo — they're in my local downloaded
+ZIPs from each Colab run. This repo has the notebook, the README, and the evidence files
+(scores, plots, GIFs, configs) needed to follow along without rerunning anything.
 
 ## Sources
 
