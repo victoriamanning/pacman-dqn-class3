@@ -44,6 +44,10 @@ stayed much flatter instead of climbing continuously. It's the version below.
 
 ## Evaluation results — my final run (25 episodes, lr = 0.00002)
 
+This is the third of three experiments I actually ran — see "Other experiments I ran along the
+way" further down for the first two (25 episodes and 200 episodes, both at the original
+learning rate of 0.0001).
+
 | Game | Before (untrained) | After (trained) |
 |---|---|---|
 | 1 | 350 | 370 |
