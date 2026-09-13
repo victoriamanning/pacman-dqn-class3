@@ -1,7 +1,7 @@
 {
   "exploration": 0.2,
   "episodes_requested": 25,
-  "learning_rate": 2e-05,
+  "learning_rate": 0.0001,
   "seed": 42,
   "device": "cuda",
   "python": "3.13.15",
