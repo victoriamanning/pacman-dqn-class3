@@ -70,14 +70,17 @@ actually helped with the instability.
 
 ### Gameplay GIFs
 
-| Untrained (before) | Best of 5, after training |
-|---|---|
-| ![Untrained gameplay](results/demos/untrained.gif) | ![Best trained gameplay](results/demos/best_trained.gif) |
+| Untrained (before) | After 25 training games (intermediate) | Best of 5, after training |
+|---|---|---|
+| ![Untrained gameplay](results/demos/untrained.gif) | ![Intermediate gameplay, episode 25](results/demos/intermediate_episode_0025.gif) | ![Best trained gameplay](results/demos/best_trained.gif) |
 
-Since this final run only used 25 episodes, there's no separate "intermediate" checkpoint before
-the end — episode 25 is both the intermediate demo point and the final result. (My 200-episode
-experiment below does have real intermediate GIFs, since it crossed that threshold several
-times.)
+The middle GIF is the notebook's own periodic progress sample, captured right at episode 25 —
+since this run's total budget is also 25 episodes, that intermediate checkpoint and the final
+trained checkpoint are the same weights. It's evaluated differently though (one seed, single
+game) than the "best of 5" GIF on the right (best of all 5 evaluation games), so the two clips
+aren't identical even though they come from the same trained network. (My 200-episode
+experiment below has real intermediate GIFs across several distinct checkpoints, since it
+crossed the 25-episode threshold multiple times.)
 
 ## Actual training budget (this run)
 
